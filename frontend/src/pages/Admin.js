@@ -48,7 +48,8 @@ const Admin = () => {
       setViolations(violationsResponse.data);
       setAllUsers(usersResponse.data);
     } catch (error) {
-      toast.error('Failed to fetch data');
+      console.error('Admin dashboard fetch error:', error?.response || error);
+      toast.error(error?.response?.data?.message || 'Failed to fetch data');
     } finally {
       setLoading(false);
     }
@@ -342,15 +343,17 @@ const Admin = () => {
                 <div key={attempt._id} className="px-6 py-3 border-b last:border-b-0">
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-white">{attempt.exam.title}</p>
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        {attempt.exam?.title || 'Unknown exam'}
+                      </p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {attempt.user.name} ({attempt.user.userId})
+                        {attempt.user ? `${attempt.user.name} (${attempt.user.userId})` : 'Unknown user'}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="font-medium text-gray-900 dark:text-white">{attempt.score}%</p>
                       <p className="text-sm text-gray-500 dark:text-gray-500">
-                        {new Date(attempt.submittedAt).toLocaleDateString()}
+                        {attempt.submittedAt ? new Date(attempt.submittedAt).toLocaleDateString() : '-'}
                       </p>
                     </div>
                   </div>
@@ -376,12 +379,13 @@ const Admin = () => {
                     <div>
                       <p className="font-medium text-gray-900 dark:text-white">{violation.type}</p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {violation.user.name} - {violation.exam.title}
+                        {(violation.user && violation.user.name) || 'Unknown user'} -{' '}
+                        {(violation.exam && violation.exam.title) || 'Unknown exam'}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-gray-500 dark:text-gray-500">
-                        {new Date(violation.timestamp).toLocaleDateString()}
+                        {violation.timestamp ? new Date(violation.timestamp).toLocaleDateString() : '-'}
                       </p>
                     </div>
                   </div>
@@ -496,7 +500,22 @@ const Admin = () => {
               </div>
               
               <div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Available Users</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">Available Users</h3>
+                  <button
+                    type="button"
+                    className="px-3 py-1 text-sm rounded bg-green-600 text-white hover:bg-green-700"
+                    onClick={() => {
+                      const unassigned = allUsers.filter(user =>
+                        !selectedExam.assignedUsers?.some(assigned => assigned._id === user._id)
+                      );
+                      if (unassigned.length === 0) return;
+                      handleAssignUsers(selectedExam._id, unassigned.map(u => u._id));
+                    }}
+                  >
+                    Give access to all
+                  </button>
+                </div>
                 <div className="space-y-2">
                   {allUsers.filter(user => 
                     !selectedExam.assignedUsers?.some(assigned => assigned._id === user._id)
@@ -530,7 +549,7 @@ const Admin = () => {
             <div className="px-6 py-4 border-b">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  Exam Monitoring - {monitoringData.exam.title}
+                  Exam Monitoring - {monitoringData.exam?.title || 'Exam'}
                 </h2>
                 <button
                   onClick={() => setShowMonitoringModal(false)}

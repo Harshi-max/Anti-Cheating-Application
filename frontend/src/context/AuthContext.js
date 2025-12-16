@@ -49,9 +49,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (userId, password, name, email) => {
+  const register = async (userId, password, name, email, role = 'student', adminCode) => {
     try {
-      const response = await api.post('/auth/register', { userId, password, name, email });
+      const response = await api.post('/auth/register', { userId, password, name, email, role, adminCode });
       const { token, user } = response.data;
       localStorage.setItem('token', token);
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -59,6 +59,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       return { success: true };
     } catch (error) {
+      console.error('Registration error:', error?.response || error);
       return {
         success: false,
         message: error.response?.data?.message || error.response?.data?.errors?.[0]?.msg || 'Registration failed'

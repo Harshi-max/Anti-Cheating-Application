@@ -19,6 +19,9 @@ const Register = () => {
     email: '',
   });
 
+  const [role, setRole] = useState('student');
+  const [adminCode, setAdminCode] = useState('');
+
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
@@ -66,7 +69,14 @@ const Register = () => {
     }
 
     setLoading(true);
-    const result = await register(formData.userId, formData.password, formData.name, formData.email);
+    const result = await register(
+      formData.userId,
+      formData.password,
+      formData.name,
+      formData.email,
+      role,
+      role === 'admin' ? adminCode : undefined
+    );
 
     if (result.success) {
       toast.success('Registration successful!');
@@ -115,6 +125,36 @@ const Register = () => {
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className={`rounded-md shadow-sm ${darkMode ? 'bg-gray-800' : 'bg-white'} p-6 space-y-4`}>
+            {/* Role Selection */}
+            <div>
+              <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Register as
+              </span>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRole('student')}
+                  className={`flex-1 py-2 px-3 rounded-md border text-sm font-medium ${
+                    role === 'student'
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : 'bg-transparent text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'
+                  }`}
+                >
+                  Student
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('admin')}
+                  className={`flex-1 py-2 px-3 rounded-md border text-sm font-medium ${
+                    role === 'admin'
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : 'bg-transparent text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'
+                  }`}
+                >
+                  Admin
+                </button>
+              </div>
+            </div>
             {/* User ID */}
             <InputField
               label="User ID"
@@ -168,6 +208,18 @@ const Register = () => {
               placeholder="Confirm your password"
               type="password"
             />
+
+            {role === 'admin' && (
+              <InputField
+                label="Admin Registration Code"
+                name="adminCode"
+                icon={Lock}
+                value={adminCode}
+                onChange={(e) => setAdminCode(e.target.value)}
+                placeholder="Enter admin registration code"
+                type="password"
+              />
+            )}
           </div>
 
           <div>

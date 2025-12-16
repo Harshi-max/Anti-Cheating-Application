@@ -51,7 +51,18 @@ const validateViolation = [
   body('type')
     .notEmpty()
     .withMessage('Violation type is required')
-    .isIn(['TAB_SWITCH', 'WINDOW_BLUR', 'FULLSCREEN_EXIT', 'COPY_PASTE', 'FACE_MOVED', 'FACE_NOT_DETECTED', 'MULTIPLE_FACES'])
+    .isIn([
+      'TAB_SWITCH',
+      'WINDOW_BLUR',
+      'FULLSCREEN_EXIT',
+      'COPY_PASTE',
+      'FACE_MOVED',
+      'FACE_NOT_DETECTED',
+      'MULTIPLE_FACES',
+      'PAGE_RELOAD',
+      'TIME_VIOLATION',
+      'MULTIPLE_LOGIN_ATTEMPTS'
+    ])
     .withMessage('Invalid violation type'),
   handleValidationErrors
 ];

@@ -47,8 +47,10 @@ const logViolation = async (req, res) => {
 
     // Auto-submit if max violations reached
     if (attempt.violationCount >= attempt.maxViolations) {
+      const now = new Date();
       attempt.status = 'auto_submitted';
-      attempt.endTime = new Date();
+      attempt.endTime = now;
+      attempt.submittedAt = now;
 
       // Calculate score
       const exam = await Exam.findById(attempt.exam);

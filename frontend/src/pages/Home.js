@@ -16,9 +16,15 @@ const Home = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // If this is an admin account, redirect to the admin dashboard instead of showing student view
+    if (user?.role === 'admin') {
+      navigate('/admin', { replace: true });
+      return;
+    }
+
     fetchExams();
     fetchStats();
-  }, []);
+  }, [user]);
 
   const fetchStats = async () => {
     try {

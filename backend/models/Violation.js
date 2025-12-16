@@ -18,7 +18,19 @@ const violationSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['TAB_SWITCH', 'WINDOW_BLUR', 'FULLSCREEN_EXIT', 'COPY_PASTE', 'FACE_MOVED', 'FACE_NOT_DETECTED', 'MULTIPLE_FACES'],
+    enum: [
+      'TAB_SWITCH',
+      'WINDOW_BLUR',
+      'FULLSCREEN_EXIT',
+      'COPY_PASTE',
+      'FACE_MOVED',
+      'FACE_NOT_DETECTED',
+      'MULTIPLE_FACES',
+      // Additional violation types
+      'PAGE_RELOAD',
+      'TIME_VIOLATION',
+      'MULTIPLE_LOGIN_ATTEMPTS'
+    ],
     required: true
   },
   severity: {

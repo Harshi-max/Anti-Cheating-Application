@@ -2,6 +2,7 @@ const express = require('express');
 const Exam = require('../models/Exam');
 const ExamAttempt = require('../models/ExamAttempt');
 const Violation = require('../models/Violation');
+const User = require('../models/User');
 const { auth, isAdmin, isStudent } = require('../middleware/auth');
 const { examLimiter } = require('../middleware/rateLimiter');
 const router = express.Router();
@@ -37,6 +38,122 @@ router.get('/', auth, isAdmin, async (req, res) => {
     res.json(exams);
   } catch (error) {
     console.error('Get all exams error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Create exam (admin only)
+router.post('/', auth, isAdmin, async (req, res) => {
+  try {
+    const {
+      title,
+      description,
+      questions,
+      duration,
+      startTime,
+      endTime,
+      isActive,
+      isPublished
+    } = req.body;
+
+    if (!title || !questions || !Array.isArray(questions) || questions.length === 0) {
+      return res.status(400).json({ message: 'Title and at least one question are required' });
+    }
+
+    const durationMinutes = duration || 60;
+    const start = startTime ? new Date(startTime) : new Date();
+    const end =
+      endTime ? new Date(endTime) : new Date(start.getTime() + durationMinutes * 60 * 1000);
+
+    const exam = new Exam({
+      title,
+      description,
+      questions,
+      duration: durationMinutes,
+      startTime: start,
+      endTime: end,
+      isActive: typeof isActive === 'boolean' ? isActive : true,
+      isPublished: typeof isPublished === 'boolean' ? isPublished : false
+    });
+
+    await exam.save();
+    res.status(201).json(exam);
+  } catch (error) {
+    console.error('Create exam error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update exam (admin only)
+router.put('/:examId', auth, isAdmin, async (req, res) => {
+  try {
+    const { examId } = req.params;
+    const updates = req.body;
+
+    // Prevent changing assignedUsers via this route
+    delete updates.assignedUsers;
+
+    const exam = await Exam.findByIdAndUpdate(
+      examId,
+      updates,
+      { new: true, runValidators: true }
+    );
+
+    if (!exam) {
+      return res.status(404).json({ message: 'Exam not found' });
+    }
+
+    res.json(exam);
+  } catch (error) {
+    console.error('Update exam error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update exam status (enable/disable, publish/unpublish)
+router.patch('/:examId/status', auth, isAdmin, async (req, res) => {
+  try {
+    const { examId } = req.params;
+    const { isActive, isPublished } = req.body;
+
+    const update = {};
+    if (typeof isActive === 'boolean') update.isActive = isActive;
+    if (typeof isPublished === 'boolean') update.isPublished = isPublished;
+
+    const exam = await Exam.findByIdAndUpdate(
+      examId,
+      update,
+      { new: true }
+    );
+
+    if (!exam) {
+      return res.status(404).json({ message: 'Exam not found' });
+    }
+
+    res.json(exam);
+  } catch (error) {
+    console.error('Update exam status error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Delete exam (admin only)
+router.delete('/:examId', auth, isAdmin, async (req, res) => {
+  try {
+    const { examId } = req.params;
+
+    const exam = await Exam.findByIdAndDelete(examId);
+    if (!exam) {
+      return res.status(404).json({ message: 'Exam not found' });
+    }
+
+    // Clean up related attempts and violations
+    await ExamAttempt.deleteMany({ exam: examId });
+    await Violation.deleteMany({ exam: examId });
+
+    res.json({ message: 'Exam and related data deleted successfully' });
+  } catch (error) {
+    console.error('Delete exam error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -222,8 +339,10 @@ router.post('/:examId/submit', auth, async (req, res) => {
       }
     });
 
+    const now = new Date();
     attempt.score = score;
-    attempt.endTime = new Date();
+    attempt.endTime = now;
+    attempt.submittedAt = now;
     attempt.status = 'completed';
 
     await attempt.save();
