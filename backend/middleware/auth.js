@@ -23,5 +23,19 @@ const auth = async (req, res, next) => {
   }
 };
 
-module.exports = auth;
+const isAdmin = (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Access denied. Admin role required.' });
+  }
+  next();
+};
+
+const isStudent = (req, res, next) => {
+  if (req.user.role !== 'student') {
+    return res.status(403).json({ message: 'Access denied. Student role required.' });
+  }
+  next();
+};
+
+module.exports = { auth, isAdmin, isStudent };
 

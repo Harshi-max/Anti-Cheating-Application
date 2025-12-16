@@ -9,6 +9,7 @@ import Register from './pages/Register';
 import Home from './pages/Home';
 import ExamInstructions from './pages/ExamInstructions';
 import Exam from './pages/Exam';
+import Admin from './pages/Admin';
 import Results from './pages/Results';
 import { Toaster } from 'react-hot-toast';
 import './App.css';
@@ -51,6 +52,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <Results />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <PrivateRoute>
+                  <Admin />
                 </PrivateRoute>
               }
             />

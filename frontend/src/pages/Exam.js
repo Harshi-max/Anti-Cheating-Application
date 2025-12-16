@@ -336,6 +336,18 @@ const Exam = () => {
       ref={examContainerRef}
       className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'} ${!isFullscreen ? 'p-4' : ''}`}
     >
+      {/* Back Button */}
+      {!isFullscreen && (
+        <div className="mb-4">
+          <button
+            onClick={() => navigate('/home')}
+            className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+          >
+            ← Back to Home
+          </button>
+        </div>
+      )}
+
       {/* Warning Modal */}
       <AnimatePresence>
         {showWarning && (

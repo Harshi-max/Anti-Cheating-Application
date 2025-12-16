@@ -10,13 +10,24 @@ import toast from 'react-hot-toast';
 const Home = () => {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ completed: 0, violations: 0 });
   const { user, logout } = useContext(AuthContext);
   const { darkMode, toggleDarkMode } = useTheme();
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchExams();
+    fetchStats();
   }, []);
+
+  const fetchStats = async () => {
+    try {
+      const response = await api.get('/user/stats');
+      setStats(response.data);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
 
   const fetchExams = async () => {
     try {
@@ -108,6 +119,28 @@ const Home = () => {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">My Exams</h1>
           <p className="text-gray-600 dark:text-gray-400">Select an exam to begin</p>
         </motion.div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-lg shadow-sm`}>
+            <div className="flex items-center">
+              <CheckCircle className="w-8 h-8 text-green-500 mr-4" />
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Completed Exams</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.completed}</p>
+              </div>
+            </div>
+          </div>
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-lg shadow-sm`}>
+            <div className="flex items-center">
+              <AlertCircle className="w-8 h-8 text-red-500 mr-4" />
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Violations</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.violations}</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {exams.length === 0 ? (
           <motion.div

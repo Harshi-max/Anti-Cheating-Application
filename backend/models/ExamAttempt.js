@@ -55,6 +55,9 @@ const examAttemptSchema = new mongoose.Schema({
     enum: ['in_progress', 'completed', 'flagged', 'auto_submitted'],
     default: 'in_progress'
   },
+  submittedAt: {
+    type: Date
+  },
   isFullscreen: {
     type: Boolean,
     default: false

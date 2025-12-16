@@ -1,5 +1,7 @@
 const express = require('express');
-const auth = require('../middleware/auth');
+const { auth, isAdmin, isStudent } = require('../middleware/auth');
+const ExamAttempt = require('../models/ExamAttempt');
+const Violation = require('../models/Violation');
 const router = express.Router();
 
 // Get current user
@@ -14,6 +16,28 @@ router.get('/me', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Get user error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get user stats
+router.get('/stats', auth, async (req, res) => {
+  try {
+    const completedAttempts = await ExamAttempt.countDocuments({
+      user: req.user._id,
+      submittedAt: { $exists: true }
+    });
+
+    const totalViolations = await Violation.countDocuments({
+      user: req.user._id
+    });
+
+    res.json({
+      completed: completedAttempts,
+      violations: totalViolations
+    });
+  } catch (error) {
+    console.error('Get stats error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

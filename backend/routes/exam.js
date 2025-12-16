@@ -1,16 +1,52 @@
 const express = require('express');
 const Exam = require('../models/Exam');
 const ExamAttempt = require('../models/ExamAttempt');
-const auth = require('../middleware/auth');
+const Violation = require('../models/Violation');
+const { auth, isAdmin, isStudent } = require('../middleware/auth');
 const { examLimiter } = require('../middleware/rateLimiter');
 const router = express.Router();
 
-// Get all exams assigned to the user
-router.get('/assigned', auth, examLimiter, async (req, res) => {
+// Get admin stats
+router.get('/admin/stats', auth, isAdmin, async (req, res) => {
+  try {
+    const totalExams = await Exam.countDocuments();
+    const activeExams = await Exam.countDocuments({ isActive: true });
+    const publishedExams = await Exam.countDocuments({ isPublished: true });
+    const totalAttempts = await ExamAttempt.countDocuments();
+    const completedAttempts = await ExamAttempt.countDocuments({ submittedAt: { $exists: true } });
+    const totalViolations = await Violation.countDocuments();
+
+    res.json({
+      totalExams,
+      activeExams,
+      publishedExams,
+      totalAttempts,
+      completedAttempts,
+      totalViolations
+    });
+  } catch (error) {
+    console.error('Get admin stats error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get all exams (admin only)
+router.get('/', auth, isAdmin, async (req, res) => {
+  try {
+    const exams = await Exam.find().populate('assignedUsers', 'name userId');
+    res.json(exams);
+  } catch (error) {
+    console.error('Get all exams error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get all assigned and published exams for students
+router.get('/assigned', auth, isStudent, examLimiter, async (req, res) => {
   try {
     const exams = await Exam.find({
-      assignedUsers: req.user._id,
-      isActive: true
+      isPublished: true,
+      assignedUsers: req.user._id
     }).select('-questions.correctAnswer');
 
     res.json(exams);
@@ -241,6 +277,245 @@ router.get('/:examId/attempt', auth, async (req, res) => {
     res.json(attempt);
   } catch (error) {
     console.error('Get attempt error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get completed exams for student
+router.get('/student/completed-exams', auth, isStudent, async (req, res) => {
+  try {
+    const completedAttempts = await ExamAttempt.find({
+      user: req.user._id,
+      submittedAt: { $exists: true }
+    })
+    .populate('exam', 'title description')
+    .sort({ submittedAt: -1 });
+
+    res.json(completedAttempts);
+  } catch (error) {
+    console.error('Get student completed exams error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get all completed exams for admin
+router.get('/admin/completed-exams', auth, isAdmin, async (req, res) => {
+  try {
+    const completedAttempts = await ExamAttempt.find({
+      submittedAt: { $exists: true }
+    })
+    .populate('user', 'name userId')
+    .populate('exam', 'title description')
+    .sort({ submittedAt: -1 });
+
+    res.json(completedAttempts);
+  } catch (error) {
+    console.error('Get admin completed exams error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Log violation during exam
+router.post('/:examId/violation', auth, isStudent, async (req, res) => {
+  try {
+    const { type, description } = req.body;
+    
+    // Find the active exam attempt for this user and exam
+    const examAttempt = await ExamAttempt.findOne({
+      user: req.user._id,
+      exam: req.params.examId,
+      submittedAt: { $exists: false }
+    });
+
+    if (!examAttempt) {
+      return res.status(404).json({ message: 'Active exam attempt not found' });
+    }
+
+    // Create violation record
+    const violation = new Violation({
+      examAttempt: examAttempt._id,
+      user: req.user._id,
+      exam: req.params.examId,
+      type,
+      description: description || type
+    });
+
+    await violation.save();
+
+    // Update exam attempt violation count
+    examAttempt.violations.push(violation._id);
+    examAttempt.violationCount += 1;
+    await examAttempt.save();
+
+    res.status(201).json({ message: 'Violation logged successfully' });
+  } catch (error) {
+    console.error('Log violation error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get violations for student
+router.get('/student/violations', auth, isStudent, async (req, res) => {
+  try {
+    const violations = await Violation.find({ user: req.user._id })
+      .populate('exam', 'title')
+      .sort({ timestamp: -1 });
+
+    res.json(violations);
+  } catch (error) {
+    console.error('Get student violations error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get all violations for admin
+router.get('/admin/violations', auth, isAdmin, async (req, res) => {
+  try {
+    const violations = await Violation.find()
+      .populate('user', 'name userId')
+      .populate('exam', 'title')
+      .sort({ timestamp: -1 });
+
+    res.json(violations);
+  } catch (error) {
+    console.error('Get admin violations error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get violations for specific exam (admin)
+router.get('/admin/violations/exam/:examId', auth, isAdmin, async (req, res) => {
+  try {
+    const violations = await Violation.find({ exam: req.params.examId })
+      .populate('user', 'name userId')
+      .populate('exam', 'title')
+      .sort({ timestamp: -1 });
+
+    res.json(violations);
+  } catch (error) {
+    console.error('Get exam violations error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get violations for specific student (admin)
+router.get('/admin/violations/student/:studentId', auth, isAdmin, async (req, res) => {
+  try {
+    const violations = await Violation.find({ user: req.params.studentId })
+      .populate('user', 'name userId')
+      .populate('exam', 'title')
+      .sort({ timestamp: -1 });
+
+    res.json(violations);
+  } catch (error) {
+    console.error('Get student violations error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get detailed exam monitoring data (admin)
+router.get('/admin/monitoring/:examId', auth, isAdmin, async (req, res) => {
+  try {
+    const exam = await Exam.findById(req.params.examId);
+    if (!exam) {
+      return res.status(404).json({ message: 'Exam not found' });
+    }
+
+    const totalAttempts = await ExamAttempt.countDocuments({ exam: req.params.examId });
+    const completedAttempts = await ExamAttempt.countDocuments({ 
+      exam: req.params.examId, 
+      submittedAt: { $exists: true } 
+    });
+    const totalViolations = await Violation.countDocuments({ exam: req.params.examId });
+
+    const studentsAttempted = await ExamAttempt.find({ exam: req.params.examId })
+      .populate('user', 'name userId')
+      .select('user submittedAt score violationCount');
+
+    res.json({
+      exam: {
+        id: exam._id,
+        title: exam.title,
+        description: exam.description
+      },
+      stats: {
+        totalAttempts,
+        completedAttempts,
+        totalViolations
+      },
+      studentsAttempted
+    });
+  } catch (error) {
+    console.error('Get exam monitoring error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Assign exam to users (admin only)
+router.post('/:examId/assign', auth, isAdmin, async (req, res) => {
+  try {
+    const { userIds } = req.body;
+    const exam = await Exam.findById(req.params.examId);
+    
+    if (!exam) {
+      return res.status(404).json({ message: 'Exam not found' });
+    }
+
+    // Add users to assignedUsers array if not already present
+    userIds.forEach(userId => {
+      if (!exam.assignedUsers.includes(userId)) {
+        exam.assignedUsers.push(userId);
+      }
+    });
+
+    await exam.save();
+    await exam.populate('assignedUsers', 'name userId email');
+
+    res.json({ 
+      message: 'Users assigned successfully',
+      exam: exam
+    });
+  } catch (error) {
+    console.error('Assign users error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Unassign exam from users (admin only)
+router.post('/:examId/unassign', auth, isAdmin, async (req, res) => {
+  try {
+    const { userIds } = req.body;
+    const exam = await Exam.findById(req.params.examId);
+    
+    if (!exam) {
+      return res.status(404).json({ message: 'Exam not found' });
+    }
+
+    // Remove users from assignedUsers array
+    exam.assignedUsers = exam.assignedUsers.filter(userId => 
+      !userIds.includes(userId.toString())
+    );
+
+    await exam.save();
+    await exam.populate('assignedUsers', 'name userId email');
+
+    res.json({ 
+      message: 'Users unassigned successfully',
+      exam: exam
+    });
+  } catch (error) {
+    console.error('Unassign users error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get all users (admin only)
+router.get('/admin/users', auth, isAdmin, async (req, res) => {
+  try {
+    const users = await User.find({ role: 'student' }).select('name userId email');
+    res.json(users);
+  } catch (error) {
+    console.error('Get users error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

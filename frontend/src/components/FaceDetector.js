@@ -1,20 +1,21 @@
-import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
+import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
-import '@tensorflow/tfjs-core';
-import '@tensorflow/tfjs-backend-webgl';
-import { Videocam, VideocamOff, AlertTriangle } from 'lucide-react';
+import * as tf from '@tensorflow/tfjs';
+import { Video, VideoOff, AlertTriangle } from 'react-feather'; // adjust icons import
 
 const FaceDetector = forwardRef(({ onCheatingIncident, darkMode = false }, ref) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const [isDetecting, setIsDetecting] = useState(false);
-  const [status, setStatus] = useState('Initializing...');
-  const [error, setError] = useState(null);
   const modelRef = useRef(null);
+
   const detectionIntervalRef = useRef(null);
-  const lastFacePositionRef = useRef(null);
   const noFaceCountRef = useRef(0);
   const faceMovementCountRef = useRef(0);
+  const lastFacePositionRef = useRef(null);
+
+  const [isDetecting, setIsDetecting] = useState(false);
+  const [status, setStatus] = useState('Idle');
+  const [error, setError] = useState(null);
 
   useImperativeHandle(ref, () => ({
     start: startDetection,
@@ -23,17 +24,16 @@ const FaceDetector = forwardRef(({ onCheatingIncident, darkMode = false }, ref) 
 
   useEffect(() => {
     initializeModel();
-    return () => {
-      stopDetection();
-      if (modelRef.current) {
-        modelRef.current.dispose();
-      }
-    };
+    startCamera();
+
+    return () => stopDetection(); // cleanup on unmount
   }, []);
 
   const initializeModel = async () => {
     try {
       setStatus('Loading face detection model...');
+      await tf.setBackend('webgl');
+      await tf.ready();
       const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh;
       const detectorConfig = {
         runtime: 'tfjs',
@@ -47,23 +47,18 @@ const FaceDetector = forwardRef(({ onCheatingIncident, darkMode = false }, ref) 
       );
       
       modelRef.current = detector;
-      setStatus('Model loaded. Starting camera...');
-      await startCamera();
+      setStatus('Model loaded. Starting monitoring...');
+      startDetection();
     } catch (err) {
-      console.error('Error initializing model:', err);
-      setError('Failed to initialize face detection. Please allow camera access.');
-      setStatus('Error');
+      console.error('Error loading model:', err);
+      setError('Failed to load face detection model.');
     }
   };
 
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: 640,
-          height: 480,
-          facingMode: 'user'
-        }
+        video: { width: 640, height: 480, facingMode: 'user' },
       });
 
       if (videoRef.current) {
@@ -82,7 +77,7 @@ const FaceDetector = forwardRef(({ onCheatingIncident, darkMode = false }, ref) 
 
   const startDetection = () => {
     if (!modelRef.current || isDetecting) return;
-    
+
     setIsDetecting(true);
     setStatus('Monitoring...');
     setError(null);
@@ -98,10 +93,9 @@ const FaceDetector = forwardRef(({ onCheatingIncident, darkMode = false }, ref) 
       detectionIntervalRef.current = null;
     }
     setIsDetecting(false);
-    
-    if (videoRef.current && videoRef.current.srcObject) {
-      const tracks = videoRef.current.srcObject.getTracks();
-      tracks.forEach(track => track.stop());
+
+    if (videoRef.current?.srcObject) {
+      videoRef.current.srcObject.getTracks().forEach((track) => track.stop());
     }
   };
 
@@ -116,10 +110,8 @@ const FaceDetector = forwardRef(({ onCheatingIncident, darkMode = false }, ref) 
     canvas.height = video.videoHeight || 480;
 
     try {
-      const faces = await modelRef.current.estimateFaces(video, {
-        flipHorizontal: false,
-        staticImageMode: false
-      });
+      // TODO: Replace with actual face detection model
+      const faces = []; // await modelRef.current.estimateFaces(video);
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -127,10 +119,7 @@ const FaceDetector = forwardRef(({ onCheatingIncident, darkMode = false }, ref) 
       if (faces.length === 0) {
         noFaceCountRef.current++;
         if (noFaceCountRef.current >= 3) {
-          onCheatingIncident && onCheatingIncident(
-            'FACE_NOT_DETECTED',
-            'Face not detected in camera view'
-          );
+          onCheatingIncident?.('FACE_NOT_DETECTED', 'Face not detected in camera view');
           setStatus('⚠️ Face not detected');
           noFaceCountRef.current = 0;
         }
@@ -139,80 +128,33 @@ const FaceDetector = forwardRef(({ onCheatingIncident, darkMode = false }, ref) 
       }
 
       if (faces.length > 1) {
-        onCheatingIncident && onCheatingIncident(
-          'MULTIPLE_FACES',
-          'Multiple faces detected in camera view'
-        );
+        onCheatingIncident?.('MULTIPLE_FACES', 'Multiple faces detected in camera view');
         setStatus('⚠️ Multiple faces detected');
         return;
       }
 
       noFaceCountRef.current = 0;
-      const face = faces[0];
-      const keypoints = face.keypoints;
+      setStatus('✓ Monitoring');
 
-      const noseTip = keypoints.find(kp => kp.name === 'nose tip');
-      if (!noseTip) return;
-
-      const currentPosition = {
-        x: noseTip.x,
-        y: noseTip.y,
-        z: noseTip.z || 0
-      };
-
-      if (lastFacePositionRef.current) {
-        const movement = calculateMovement(lastFacePositionRef.current, currentPosition);
-        
-        const movementThreshold = 50;
-        const zMovementThreshold = 0.1;
-
-        if (movement.distance > movementThreshold || Math.abs(movement.zChange) > zMovementThreshold) {
-          faceMovementCountRef.current++;
-          
-          if (faceMovementCountRef.current >= 2) {
-            onCheatingIncident && onCheatingIncident(
-              'FACE_MOVED',
-              `Significant face movement detected (${Math.round(movement.distance)}px)`
-            );
-            setStatus('⚠️ Face movement detected');
-            faceMovementCountRef.current = 0;
-          }
-        } else {
-          faceMovementCountRef.current = Math.max(0, faceMovementCountRef.current - 1);
-          setStatus('✓ Monitoring');
-        }
-      }
-
-      lastFacePositionRef.current = currentPosition;
-
-      ctx.fillStyle = 'rgba(0, 255, 0, 0.5)';
-      keypoints.forEach(keypoint => {
+      // Example drawing points (replace with actual keypoints)
+      faces[0].keypoints?.forEach((kp) => {
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.5)';
         ctx.beginPath();
-        ctx.arc(keypoint.x, keypoint.y, 2, 0, 2 * Math.PI);
+        ctx.arc(kp.x, kp.y, 2, 0, 2 * Math.PI);
         ctx.fill();
       });
-
     } catch (err) {
       console.error('Error detecting face:', err);
     }
-  };
-
-  const calculateMovement = (prev, current) => {
-    const dx = current.x - prev.x;
-    const dy = current.y - prev.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const zChange = (current.z || 0) - (prev.z || 0);
-    
-    return { distance, zChange };
   };
 
   return (
     <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-4`}>
       <div className="flex items-center mb-3">
         {isDetecting ? (
-          <Videocam className="w-5 h-5 text-green-500 mr-2" />
+          <Video className="w-5 h-5 text-green-500 mr-2" />
         ) : (
-          <VideocamOff className="w-5 h-5 text-gray-400 mr-2" />
+          <VideoOff className="w-5 h-5 text-gray-400 mr-2" />
         )}
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Face Detection</h3>
       </div>
@@ -232,11 +174,11 @@ const FaceDetector = forwardRef(({ onCheatingIncident, darkMode = false }, ref) 
           autoPlay
           playsInline
           muted
-          className={`w-full rounded-lg ${isDetecting ? 'block' : 'hidden'}`}
+          className="w-full rounded-lg block"
         />
         <canvas
           ref={canvasRef}
-          className={`absolute top-0 left-0 w-full rounded-lg ${isDetecting ? 'block' : 'hidden'}`}
+          className="absolute top-0 left-0 w-full rounded-lg block"
         />
       </div>
 

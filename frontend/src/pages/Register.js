@@ -1,38 +1,37 @@
 import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { ThemeContext } from '../context/ThemeContext';
-
-const Register = () => {
-  const { darkMode, toggleDarkMode } = React.useContext(ThemeContext);
+import { useTheme } from '../context/ThemeContext';
 import { motion } from 'framer-motion';
 import { GraduationCap, Mail, User, Lock, UserCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Register = () => {
+  const { register } = useContext(AuthContext);
+  const { darkMode, toggleDarkMode } = useTheme();
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     userId: '',
     password: '',
     confirmPassword: '',
     name: '',
-    email: ''
+    email: '',
   });
+
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const { register } = useContext(AuthContext);
-  const { darkMode, toggleDarkMode } = useTheme();
-  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
-    // Clear error when user starts typing
+
     if (errors[e.target.name]) {
       setErrors({
         ...errors,
-        [e.target.name]: ''
+        [e.target.name]: '',
       });
     }
   };
@@ -40,31 +39,19 @@ const Register = () => {
   const validate = () => {
     const newErrors = {};
 
-    if (!formData.userId.trim()) {
-      newErrors.userId = 'User ID is required';
-    } else if (formData.userId.length < 3) {
-      newErrors.userId = 'User ID must be at least 3 characters';
-    }
+    if (!formData.userId.trim()) newErrors.userId = 'User ID is required';
+    else if (formData.userId.length < 3) newErrors.userId = 'User ID must be at least 3 characters';
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
-    }
+    if (!formData.name.trim()) newErrors.name = 'Name is required';
 
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
+    if (!formData.email.trim()) newErrors.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid';
 
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
+    if (!formData.password) newErrors.password = 'Password is required';
+    else if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
 
-    if (formData.password !== formData.confirmPassword) {
+    if (formData.password !== formData.confirmPassword)
       newErrors.confirmPassword = 'Passwords do not match';
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -72,7 +59,7 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validate()) {
       toast.error('Please fix the errors in the form');
       return;
@@ -87,11 +74,16 @@ const Register = () => {
     } else {
       toast.error(result.message);
     }
+
     setLoading(false);
   };
 
   return (
-    <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 to-indigo-100'} py-12 px-4 sm:px-6 lg:px-8`}>
+    <div
+      className={`min-h-screen flex items-center justify-center ${
+        darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 to-indigo-100'
+      } py-12 px-4 sm:px-6 lg:px-8`}
+    >
       <div className="absolute top-4 right-4">
         <button
           onClick={toggleDarkMode}
@@ -123,120 +115,59 @@ const Register = () => {
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className={`rounded-md shadow-sm ${darkMode ? 'bg-gray-800' : 'bg-white'} p-6 space-y-4`}>
-            <div>
-              <label htmlFor="userId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                User ID
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="userId"
-                  name="userId"
-                  type="text"
-                  value={formData.userId}
-                  onChange={handleChange}
-                  className={`appearance-none relative block w-full pl-10 pr-3 py-2 border ${
-                    errors.userId ? 'border-red-300' : 'border-gray-300'
-                  } placeholder-gray-500 text-gray-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
-                  placeholder="Enter your user ID"
-                />
-              </div>
-              {errors.userId && <p className="mt-1 text-sm text-red-600">{errors.userId}</p>}
-            </div>
-
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Full Name
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <UserCircle className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className={`appearance-none relative block w-full pl-10 pr-3 py-2 border ${
-                    errors.name ? 'border-red-300' : 'border-gray-300'
-                  } placeholder-gray-500 text-gray-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
-                  placeholder="Enter your full name"
-                />
-              </div>
-              {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
-            </div>
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Email
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className={`appearance-none relative block w-full pl-10 pr-3 py-2 border ${
-                    errors.email ? 'border-red-300' : 'border-gray-300'
-                  } placeholder-gray-500 text-gray-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
-                  placeholder="Enter your email"
-                />
-              </div>
-              {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className={`appearance-none relative block w-full pl-10 pr-3 py-2 border ${
-                    errors.password ? 'border-red-300' : 'border-gray-300'
-                  } placeholder-gray-500 text-gray-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
-                  placeholder="Enter your password"
-                />
-              </div>
-              {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className={`appearance-none relative block w-full pl-10 pr-3 py-2 border ${
-                    errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
-                  } placeholder-gray-500 text-gray-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
-                  placeholder="Confirm your password"
-                />
-              </div>
-              {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>}
-            </div>
+            {/* User ID */}
+            <InputField
+              label="User ID"
+              name="userId"
+              icon={User}
+              value={formData.userId}
+              onChange={handleChange}
+              error={errors.userId}
+              placeholder="Enter your user ID"
+            />
+            {/* Name */}
+            <InputField
+              label="Full Name"
+              name="name"
+              icon={UserCircle}
+              value={formData.name}
+              onChange={handleChange}
+              error={errors.name}
+              placeholder="Enter your full name"
+            />
+            {/* Email */}
+            <InputField
+              label="Email"
+              name="email"
+              icon={Mail}
+              value={formData.email}
+              onChange={handleChange}
+              error={errors.email}
+              placeholder="Enter your email"
+              type="email"
+            />
+            {/* Password */}
+            <InputField
+              label="Password"
+              name="password"
+              icon={Lock}
+              value={formData.password}
+              onChange={handleChange}
+              error={errors.password}
+              placeholder="Enter your password"
+              type="password"
+            />
+            {/* Confirm Password */}
+            <InputField
+              label="Confirm Password"
+              name="confirmPassword"
+              icon={Lock}
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              error={errors.confirmPassword}
+              placeholder="Confirm your password"
+              type="password"
+            />
           </div>
 
           <div>
@@ -254,5 +185,32 @@ const Register = () => {
   );
 };
 
-export default Register;
+// Reusable input component
+const InputField = ({ label, name, icon: Icon, value, onChange, error, placeholder, type = 'text' }) => {
+  return (
+    <div>
+      <label htmlFor={name} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        {label}
+      </label>
+      <div className="relative">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <Icon className="h-5 w-5 text-gray-400" />
+        </div>
+        <input
+          id={name}
+          name={name}
+          type={type}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          className={`appearance-none relative block w-full pl-10 pr-3 py-2 border ${
+            error ? 'border-red-300' : 'border-gray-300'
+          } placeholder-gray-500 text-gray-900 dark:text-white dark:bg-gray-700 dark:border-gray-600 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
+        />
+      </div>
+      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+    </div>
+  );
+};
 
+export default Register;

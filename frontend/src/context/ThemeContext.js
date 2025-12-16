@@ -1,7 +1,9 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 
+// Create the context
 export const ThemeContext = createContext();
 
+// Theme provider component
 export const ThemeProvider = ({ children }) => {
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode');
@@ -17,9 +19,7 @@ export const ThemeProvider = ({ children }) => {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
   }, [darkMode]);
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-  };
+  const toggleDarkMode = () => setDarkMode(prev => !prev);
 
   return (
     <ThemeContext.Provider value={{ darkMode, toggleDarkMode }}>
@@ -28,3 +28,5 @@ export const ThemeProvider = ({ children }) => {
   );
 };
 
+// ✅ Custom hook for easier access
+export const useTheme = () => useContext(ThemeContext);

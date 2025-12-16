@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
+const { auth, isAdmin, isStudent } = require('../middleware/auth');
 const { logViolation, getViolations } = require('../controllers/violationController');
 const { validateViolation } = require('../middleware/validator');
 const { examLimiter } = require('../middleware/rateLimiter');

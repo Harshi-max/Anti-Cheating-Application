@@ -1,10 +1,7 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { ThemeContext } from '../context/ThemeContext';
-
-const Login = () => {
-  const { darkMode, toggleDarkMode } = React.useContext(ThemeContext);
+import { useTheme } from '../context/ThemeContext'; // ✅ use custom hook
 import { motion } from 'framer-motion';
 import { GraduationCap, User, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -13,13 +10,13 @@ const Login = () => {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useContext(AuthContext);
+  const { login } = React.useContext(AuthContext);
   const { darkMode, toggleDarkMode } = useTheme();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!userId || !password) {
       toast.error('Please fill in all fields');
       return;
@@ -30,15 +27,26 @@ const Login = () => {
 
     if (result.success) {
       toast.success('Login successful!');
-      navigate('/home');
+      // Check user role and navigate accordingly
+      const user = JSON.parse(localStorage.getItem('user'));
+      if (user && user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/home');
+      }
     } else {
       toast.error(result.message);
     }
+
     setLoading(false);
   };
 
   return (
-    <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 to-indigo-100'} py-12 px-4 sm:px-6 lg:px-8`}>
+    <div
+      className={`min-h-screen flex items-center justify-center ${
+        darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 to-indigo-100'
+      } py-12 px-4 sm:px-6 lg:px-8`}
+    >
       <div className="absolute top-4 right-4">
         <button
           onClick={toggleDarkMode}
@@ -71,7 +79,10 @@ const Login = () => {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className={`rounded-md shadow-sm ${darkMode ? 'bg-gray-800' : 'bg-white'} p-6 space-y-4`}>
             <div>
-              <label htmlFor="userId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label
+                htmlFor="userId"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
                 User ID
               </label>
               <div className="relative">
@@ -93,7 +104,10 @@ const Login = () => {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
                 Password
               </label>
               <div className="relative">
