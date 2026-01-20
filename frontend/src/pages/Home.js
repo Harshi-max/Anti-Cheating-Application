@@ -28,7 +28,7 @@ const Home = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await api.get('/user/stats');
+      const response = await api.get('/users/stats');
       setStats(response.data);
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -58,6 +58,11 @@ const Home = () => {
   };
 
   const getExamStatus = (exam) => {
+    // Check if exam is active and published
+    if (!exam.isActive || !exam.isPublished) {
+      return { status: 'inactive', label: 'Inactive', color: 'gray', icon: XCircle };
+    }
+
     const now = new Date();
     const startTime = new Date(exam.startTime);
     const endTime = new Date(exam.endTime);

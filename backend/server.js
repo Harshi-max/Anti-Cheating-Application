@@ -35,7 +35,9 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/exam_app'
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/exams', examRoutes);
+// User routes - support both /users and /user base paths for compatibility
 app.use('/api/users', userRoutes);
+app.use('/api/user', userRoutes);
 app.use('/api/violations', violationRoutes);
 
 // Error handling middleware

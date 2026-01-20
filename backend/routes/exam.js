@@ -62,8 +62,12 @@ router.post('/', auth, isAdmin, async (req, res) => {
 
     const durationMinutes = duration || 60;
     const start = startTime ? new Date(startTime) : new Date();
-    const end =
-      endTime ? new Date(endTime) : new Date(start.getTime() + durationMinutes * 60 * 1000);
+
+    // IMPORTANT:
+    // duration = time limit for the attempt (minutes)
+    // startTime/endTime = availability window for the exam
+    // If admin doesn't provide an endTime, default to 30 days from startTime so exams stay available longer.
+    const end = endTime ? new Date(endTime) : new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);
 
     const exam = new Exam({
       title,
@@ -163,6 +167,7 @@ router.get('/assigned', auth, isStudent, examLimiter, async (req, res) => {
   try {
     const exams = await Exam.find({
       isPublished: true,
+      isActive: true,
       assignedUsers: req.user._id
     }).select('-questions.correctAnswer');
 
@@ -580,9 +585,10 @@ router.post('/:examId/assign', auth, isAdmin, async (req, res) => {
       return res.status(404).json({ message: 'Exam not found' });
     }
 
-    // Add users to assignedUsers array if not already present
-    userIds.forEach(userId => {
-      if (!exam.assignedUsers.includes(userId)) {
+    // Add users to assignedUsers array if not already present (ObjectId-safe comparison)
+    (userIds || []).forEach((userId) => {
+      const alreadyAssigned = exam.assignedUsers.some((id) => id.toString() === userId.toString());
+      if (!alreadyAssigned) {
         exam.assignedUsers.push(userId);
       }
     });

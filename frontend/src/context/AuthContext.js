@@ -37,6 +37,7 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post('/auth/login', { userId, password });
       const { token, user } = response.data;
       localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       setUser(user);
       setIsAuthenticated(true);
@@ -54,6 +55,7 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post('/auth/register', { userId, password, name, email, role, adminCode });
       const { token, user } = response.data;
       localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       setUser(user);
       setIsAuthenticated(true);

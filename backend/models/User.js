@@ -29,7 +29,13 @@ const userSchema = new mongoose.Schema({
   assignedExams: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Exam'
-  }]
+  }],
+  passwordResetToken: {
+    type: String
+  },
+  passwordResetExpires: {
+    type: Date
+  }
 }, {
   timestamps: true
 });

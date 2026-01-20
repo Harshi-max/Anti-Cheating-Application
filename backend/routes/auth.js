@@ -1,7 +1,8 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/User');
-const { validateLogin, validateRegister } = require('../middleware/validator');
+const { validateLogin } = require('../middleware/validator');
 const { authLimiter } = require('../middleware/rateLimiter');
 const router = express.Router();
 
@@ -97,6 +98,86 @@ router.post('/register', authLimiter, async (req, res) => {
     });
   } catch (error) {
     console.error('Register error:', error);
+    
+    // Handle MongoDB validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ message: messages.join(', ') });
+    }
+    
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({ message: `${field} already exists` });
+    }
+    
+    res.status(500).json({ message: error.message || 'Server error' });
+  }
+});
+
+// Forgot password (returns token for now; in production you'd email it)
+router.post('/forgot-password', authLimiter, async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      // Don't leak whether email exists
+      return res.json({ message: 'If the email exists, a reset link has been generated.' });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    user.passwordResetToken = resetTokenHash;
+    user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+    await user.save();
+
+    // For your current setup (no email service), return token to display/copy in UI.
+    res.json({
+      message: 'Password reset token generated.',
+      resetToken,
+      expiresInMinutes: 15
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Reset password
+router.post('/reset-password', authLimiter, async (req, res) => {
+  try {
+    const { resetToken, newPassword } = req.body;
+    if (!resetToken || !newPassword) {
+      return res.status(400).json({ message: 'resetToken and newPassword are required' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
+
+    const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    const user = await User.findOne({
+      passwordResetToken: resetTokenHash,
+      passwordResetExpires: { $gt: new Date() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired reset token' });
+    }
+
+    user.password = newPassword; // will be hashed by pre-save hook
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    res.json({ message: 'Password reset successful. Please login.' });
+  } catch (error) {
+    console.error('Reset password error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { motion } from 'framer-motion';
-import { GraduationCap, Mail, User, Lock, UserCircle } from 'lucide-react';
+import { GraduationCap, Mail, User, Lock, UserCircle, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Register = () => {
@@ -94,7 +94,14 @@ const Register = () => {
         darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 to-indigo-100'
       } py-12 px-4 sm:px-6 lg:px-8`}
     >
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-4 right-4 flex items-center space-x-2">
+        <button
+          onClick={() => navigate(-1)}
+          className={`p-2 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md hover:bg-gray-100 dark:hover:bg-gray-700`}
+          title="Go back"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
         <button
           onClick={toggleDarkMode}
           className={`p-2 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md`}

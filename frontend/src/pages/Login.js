@@ -138,6 +138,12 @@ const Login = () => {
             </button>
           </div>
         </form>
+
+        <div className="text-center">
+          <Link to="/forgot-password" className="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+            Forgot password?
+          </Link>
+        </div>
       </motion.div>
     </div>
   );

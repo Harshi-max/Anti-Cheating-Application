@@ -25,7 +25,10 @@ router.get('/stats', auth, async (req, res) => {
   try {
     const completedAttempts = await ExamAttempt.countDocuments({
       user: req.user._id,
-      submittedAt: { $exists: true }
+      $or: [
+        { submittedAt: { $exists: true } },
+        { status: { $in: ['completed', 'auto_submitted'] } }
+      ]
     });
 
     const totalViolations = await Violation.countDocuments({

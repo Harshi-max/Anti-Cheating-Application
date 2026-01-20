@@ -4,7 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../utils/api';
 import { motion } from 'framer-motion';
-import { Plus, Users, BookOpen, AlertTriangle, UserCheck, UserX, Eye, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Users, BookOpen, AlertTriangle, UserCheck, UserX, Eye, CheckCircle, XCircle, Trash2, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Admin = () => {
@@ -26,7 +26,10 @@ const Admin = () => {
     title: '',
     description: '',
     questions: [{ question: '', options: ['', '', '', ''], correctAnswer: 0 }],
-    duration: 30
+    duration: 30,
+    startTime: '',
+    endTime: '',
+    isPublished: true
   });
 
   useEffect(() => {
@@ -58,18 +61,26 @@ const Admin = () => {
   const handleCreateExam = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/exams', formData);
+      const payload = {
+        ...formData,
+        startTime: formData.startTime ? new Date(formData.startTime).toISOString() : undefined,
+        endTime: formData.endTime ? new Date(formData.endTime).toISOString() : undefined
+      };
+      await api.post('/exams', payload);
       toast.success('Exam created successfully!');
       setShowCreateForm(false);
       setFormData({
         title: '',
         description: '',
         questions: [{ question: '', options: ['', '', '', ''], correctAnswer: 0 }],
-        duration: 30
+        duration: 30,
+        startTime: '',
+        endTime: '',
+        isPublished: true
       });
       fetchAllData();
     } catch (error) {
-      toast.error('Failed to create exam');
+      toast.error(error?.response?.data?.message || 'Failed to create exam');
     }
   };
 
@@ -120,6 +131,20 @@ const Admin = () => {
     }
   };
 
+  const handleDeleteExam = async (examId) => {
+    if (!window.confirm('Are you sure you want to delete this exam? This will also delete all related attempts and violations.')) {
+      return;
+    }
+    
+    try {
+      await api.delete(`/exams/${examId}`);
+      toast.success('Exam deleted successfully!');
+      fetchAllData();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Failed to delete exam');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -134,7 +159,17 @@ const Admin = () => {
       <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-sm border-b`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => navigate('/home')}
+                className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
+                title="Go back"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span>Back</span>
+              </button>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
+            </div>
             <div className="flex items-center space-x-4">
               <button
                 onClick={toggleDarkMode}
@@ -243,6 +278,47 @@ const Admin = () => {
                     required
                   />
                 </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Start Time (optional - defaults to now)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={formData.startTime}
+                    onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                    className={`w-full px-3 py-2 border rounded-lg ${
+                      darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    End Time (optional - defaults to 30 days from start)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={formData.endTime}
+                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                    className={`w-full px-3 py-2 border rounded-lg ${
+                      darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                    }`}
+                  />
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.isPublished}
+                    onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
+                    className="mr-2"
+                  />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Publish exam immediately (students can see it)
+                  </span>
+                </label>
               </div>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -453,6 +529,13 @@ const Admin = () => {
                   >
                     <Eye className="w-4 h-4 mr-1" />
                     Monitor
+                  </button>
+                  <button
+                    onClick={() => handleDeleteExam(exam._id)}
+                    className="flex items-center px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Delete
                   </button>
                 </div>
               </div>
