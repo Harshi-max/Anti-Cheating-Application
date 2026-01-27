@@ -258,7 +258,7 @@ POST /api/violations/log
 
 ---
 
-## 🧪 Test Credentials
+## 🧪 Test Credentials(for demo but u can also register and signin)
 
 - User: student1
 - Password: password123
@@ -278,18 +278,6 @@ Frontend only captures events. Backend makes all decisions.
 - Ensures accurate violation handling
 - Enables auditing & compliance
 
----
-
-## 🧱 Enterprise Refactoring Blueprint
-
-Documentation included:
-
-- **BACKEND_AUTHORITATIVE_REFACTORING_PLAN.md** (Executives)
-- **BACKEND_REFACTORING_ROADMAP.md** (Tech Leads)
-- **BACKEND_REFACTORING_CHECKLIST.md** (Engineers)
-
-**Timeline**: 2.5 – 3 months
-**Approach**: 13 structured phases with incremental rollout
 
 ---
 
