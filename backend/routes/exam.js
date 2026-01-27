@@ -3,6 +3,7 @@ const Exam = require('../models/Exam');
 const ExamAttempt = require('../models/ExamAttempt');
 const Violation = require('../models/Violation');
 const User = require('../models/User');
+const { enqueueCodeSubmission } = require('../services/codeExecutionService');
 const { auth, isAdmin, isStudent } = require('../middleware/auth');
 const { examLimiter } = require('../middleware/rateLimiter');
 const router = express.Router();
@@ -294,16 +295,20 @@ router.post('/:examId/answer', auth, async (req, res) => {
       return res.status(404).json({ message: 'Exam attempt not found' });
     }
 
-    // Get exam to check correct answer
+    // Get exam to check question type and correct answer (for MCQ)
     const exam = await Exam.findById(req.params.examId);
     const question = exam.questions[questionIndex];
-    
+
     if (!question) {
       return res.status(400).json({ message: 'Invalid question index' });
     }
 
-    // Update answer
-    const answerIndex = attempt.answers.findIndex(a => a.questionIndex === questionIndex);
+    if (question.type !== 'MCQ') {
+      return res.status(400).json({ message: 'This endpoint only accepts MCQ answers' });
+    }
+
+    // Update MCQ answer server-side
+    const answerIndex = attempt.answers.findIndex((a) => a.questionIndex === questionIndex);
     if (answerIndex !== -1) {
       attempt.answers[answerIndex].selectedAnswer = selectedAnswer;
       attempt.answers[answerIndex].isCorrect = selectedAnswer === question.correctAnswer;
@@ -315,6 +320,44 @@ router.post('/:examId/answer', auth, async (req, res) => {
   } catch (error) {
     console.error('Submit answer error:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Submit coding answer (code only; evaluation is backend-only)
+router.post('/:examId/coding/submit', auth, async (req, res) => {
+  try {
+    const { attemptId, questionIndex, language, sourceCode } = req.body;
+
+    if (
+      attemptId === undefined ||
+      questionIndex === undefined ||
+      !language ||
+      !sourceCode
+    ) {
+      return res.status(400).json({
+        message: 'Please provide attemptId, questionIndex, language, and sourceCode'
+      });
+    }
+
+    const submission = await enqueueCodeSubmission({
+      examId: req.params.examId,
+      attemptId,
+      userId: req.user._id,
+      questionIndex,
+      language,
+      sourceCode
+    });
+
+    res.status(202).json({
+      message: 'Coding submission queued for evaluation',
+      submissionId: submission._id,
+      status: submission.status
+    });
+  } catch (error) {
+    console.error('Submit coding answer error:', error);
+    res
+      .status(error.status || 500)
+      .json({ message: error.message || 'Server error' });
   }
 });
 
@@ -641,6 +684,21 @@ router.get('/admin/users', auth, isAdmin, async (req, res) => {
     res.json(users);
   } catch (error) {
     console.error('Get users error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get code submissions for an exam (admin only)
+router.get('/:examId/code-submissions', auth, isAdmin, async (req, res) => {
+  try {
+    const Submission = require('../models/Submission');
+    const submissions = await Submission.find({ exam: req.params.examId })
+      .populate('user', 'name userId')
+      .sort({ createdAt: -1 });
+    
+    res.json(submissions);
+  } catch (error) {
+    console.error('Get code submissions error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

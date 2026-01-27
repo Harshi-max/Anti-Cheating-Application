@@ -110,8 +110,8 @@ const FaceDetector = forwardRef(({ onCheatingIncident, darkMode = false }, ref) 
     canvas.height = video.videoHeight || 480;
 
     try {
-      // TODO: Replace with actual face detection model
-      const faces = []; // await modelRef.current.estimateFaces(video);
+      // Detect faces using MediaPipe Face Mesh model
+      const faces = await modelRef.current.estimateFaces(video);
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);

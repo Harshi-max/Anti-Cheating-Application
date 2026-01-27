@@ -116,7 +116,7 @@ const ExamInstructions = () => {
               <li>• Tab switching and window blur will be detected</li>
               <li>• Copy, paste, and screenshot attempts are blocked</li>
               <li>• Fullscreen mode is required and enforced</li>
-              <li>• Maximum 3 violations allowed before auto-submission</li>
+              <li>• Maximum 5 violations allowed before auto-submission</li>
             </ul>
           </div>
 

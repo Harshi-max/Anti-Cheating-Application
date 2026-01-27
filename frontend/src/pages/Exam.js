@@ -4,7 +4,7 @@ import api from '../utils/api';
 import FaceDetector from '../components/FaceDetector';
 import { useTheme } from '../context/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, Clock, CheckCircle, XCircle, Maximize2, Minimize2 } from 'lucide-react';
+import { AlertTriangle, Clock, CheckCircle, XCircle, Maximize2, Minimize2, Play, Check, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Exam = () => {
@@ -25,6 +25,8 @@ const Exam = () => {
   const [submitted, setSubmitted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedLanguage, setSelectedLanguage] = useState('python');
+  const [codeSubmissions, setCodeSubmissions] = useState({});
   const faceDetectorRef = useRef(null);
   const examContainerRef = useRef(null);
   const violationTimeoutRef = useRef(null);
@@ -285,6 +287,26 @@ const Exam = () => {
     }
   };
 
+  const handleCodeSubmit = async (questionIndex) => {
+    const code = codeSubmissions[`${questionIndex}-${selectedLanguage}`];
+    if (!code || !code.trim()) {
+      toast.error('Please write some code before submitting');
+      return;
+    }
+
+    try {
+      await api.post(`/exams/${examId}/coding/submit`, {
+        attemptId,
+        questionIndex,
+        language: selectedLanguage,
+        sourceCode: code
+      });
+      toast.success('Code submitted for evaluation. Please wait...');
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Failed to submit code');
+    }
+  };
+
   const handleFaceViolation = (type, description) => {
     logViolation(type, description);
   };
@@ -461,31 +483,96 @@ const Exam = () => {
 
             <div className="mb-6">
               <p className="text-lg text-gray-800 dark:text-gray-200 mb-6">{currentQ.question}</p>
-              <div className="space-y-3">
-                {currentQ.options.map((option, index) => (
-                  <label
-                    key={index}
-                    className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                      answers[currentQuestion] === index.toString()
-                        ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
-                        : 'border-gray-300 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-600'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name={`question-${currentQuestion}`}
-                      value={index}
-                      checked={answers[currentQuestion] === index.toString()}
-                      onChange={(e) => handleAnswerChange(currentQuestion, e.target.value)}
-                      className="w-5 h-5 text-indigo-600 focus:ring-indigo-500"
+              
+              {/* MCQ rendering */}
+              {currentQ.type === 'MCQ' && (
+                <div className="space-y-3">
+                  {currentQ.options.map((option, index) => (
+                    <label
+                      key={index}
+                      className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                        answers[currentQuestion] === index.toString()
+                          ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
+                          : 'border-gray-300 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-600'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name={`question-${currentQuestion}`}
+                        value={index}
+                        checked={answers[currentQuestion] === index.toString()}
+                        onChange={(e) => handleAnswerChange(currentQuestion, e.target.value)}
+                        className="w-5 h-5 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="ml-3 text-gray-700 dark:text-gray-300">{option}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              
+              {/* CODING rendering */}
+              {currentQ.type === 'CODING' && (
+                <div className="space-y-4">
+                  {/* Language selector */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Select Language
+                    </label>
+                    <select
+                      value={selectedLanguage}
+                      onChange={(e) => setSelectedLanguage(e.target.value)}
+                      className={`w-full px-3 py-2 border rounded-lg ${
+                        darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                      }`}
+                    >
+                      {(currentQ.languages || ['python']).map((lang) => (
+                        <option key={lang} value={lang}>
+                          {lang.charAt(0).toUpperCase() + lang.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Code editor */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Write Your Code
+                    </label>
+                    <textarea
+                      value={codeSubmissions[`${currentQuestion}-${selectedLanguage}`] || ''}
+                      onChange={(e) => {
+                        setCodeSubmissions({
+                          ...codeSubmissions,
+                          [`${currentQuestion}-${selectedLanguage}`]: e.target.value
+                        });
+                      }}
+                      className={`w-full px-4 py-3 border rounded-lg font-mono text-sm h-64 ${
+                        darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                      }`}
+                      placeholder="Enter your code here..."
+                      spellCheck="false"
                     />
-                    <span className="ml-3 text-gray-700 dark:text-gray-300">{option}</span>
-                  </label>
-                ))}
-              </div>
+                  </div>
+
+                  {/* Sample test cases (if any) */}
+                  {currentQ.testCases && currentQ.testCases.some(tc => tc.isSample) && (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                      <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-3">Sample Test Cases:</p>
+                      <div className="space-y-2 text-sm">
+                        {currentQ.testCases.filter(tc => tc.isSample).map((tc, idx) => (
+                          <div key={idx} className="text-gray-700 dark:text-gray-300">
+                            <p><strong>Input:</strong> <code className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">{tc.input}</code></p>
+                            <p><strong>Expected Output:</strong> <code className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">{tc.expectedOutput}</code></p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            <div className="flex justify-center pt-4">
+            <div className="flex justify-between items-center pt-4">
               <button
                 onClick={() => setShowSubmitDialog(true)}
                 disabled={submitted}
@@ -493,6 +580,16 @@ const Exam = () => {
               >
                 Submit Exam
               </button>
+              {currentQ.type === 'CODING' && (
+                <button
+                  onClick={() => handleCodeSubmit(currentQuestion)}
+                  disabled={submitted}
+                  className="flex items-center px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Play className="w-4 h-4 mr-2" />
+                  Run & Submit Code
+                </button>
+              )}
             </div>
           </div>
         </div>

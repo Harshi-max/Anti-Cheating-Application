@@ -1,9 +1,10 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
 const { validateLogin } = require('../middleware/validator');
 const { authLimiter } = require('../middleware/rateLimiter');
+const { createSessionAndToken, invalidateSession } = require('../services/authService');
+const { auth } = require('../middleware/auth');
 const router = express.Router();
 
 // Login
@@ -29,12 +30,8 @@ router.post('/login', authLimiter, validateLogin, async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { id: user._id, userId: user.userId },
-      process.env.JWT_SECRET || 'your_secret_key',
-      { expiresIn: process.env.JWT_EXPIRE || '7d' }
-    );
+    // Create backend session bound to this device and issue JWT
+    const { token } = await createSessionAndToken(user, req);
 
     res.json({
       token,
@@ -80,11 +77,7 @@ router.post('/register', authLimiter, async (req, res) => {
 
     await user.save();
 
-    const token = jwt.sign(
-      { id: user._id, userId: user.userId },
-      process.env.JWT_SECRET || 'your_secret_key',
-      { expiresIn: process.env.JWT_EXPIRE || '7d' }
-    );
+    const { token } = await createSessionAndToken(user, req);
 
     res.status(201).json({
       token,
@@ -112,6 +105,21 @@ router.post('/register', authLimiter, async (req, res) => {
     }
     
     res.status(500).json({ message: error.message || 'Server error' });
+  }
+});
+
+// Logout: invalidate current session so the JWT can no longer be used
+router.post('/logout', authLimiter, auth, async (req, res) => {
+  try {
+    const sessionId = req.auth?.sessionId;
+    if (sessionId) {
+      await invalidateSession(sessionId);
+    }
+
+    return res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    return res.status(500).json({ message: 'Server error' });
   }
 });
 

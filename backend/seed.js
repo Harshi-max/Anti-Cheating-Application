@@ -506,17 +506,188 @@ const seedData = async () => {
     await webExam.save();
     console.log('Created web development exam:', webExam.title);
 
+    // Create Comprehensive Exam: Coding + OS + DBMS (For All Users)
+    const comprehensiveExam = new Exam({
+      title: 'Comprehensive Tech Assessment: Coding + OS + DBMS',
+      description: 'Complete assessment covering Programming Fundamentals, Operating Systems, and Database Management Systems',
+      questions: [
+        // ===== CODING QUESTIONS (1-8) =====
+        {
+          type: 'MCQ',
+          question: 'What will be the output of this Python code? x = [1,2,3,4,5]; print(x[2:4])',
+          options: ['[1,2]', '[2,3]', '[3,4]', '[4,5]'],
+          correctAnswer: 2
+        },
+        {
+          type: 'MCQ',
+          question: 'Which of the following is a correct way to define a function in Python?',
+          options: ['def myFunc()', 'function myFunc()', 'define myFunc()', 'func myFunc()'],
+          correctAnswer: 0
+        },
+        {
+          type: 'MCQ',
+          question: 'What is the output of print(type(3.14))?',
+          options: ['<class "int">', '<class "float">', '<class "str">', '<class "double">'],
+          correctAnswer: 1
+        },
+        {
+          type: 'MCQ',
+          question: 'Which data structure uses the concept of LIFO?',
+          options: ['Queue', 'Stack', 'Array', 'Tree'],
+          correctAnswer: 1
+        },
+        {
+          type: 'MCQ',
+          question: 'What is the time complexity of binary search?',
+          options: ['O(n)', 'O(log n)', 'O(n²)', 'O(n log n)'],
+          correctAnswer: 1
+        },
+        {
+          type: 'MCQ',
+          question: 'Which of these is NOT a primitive data type in Java?',
+          options: ['int', 'float', 'String', 'double'],
+          correctAnswer: 2
+        },
+        {
+          type: 'MCQ',
+          question: 'What keyword is used to create a constant in JavaScript?',
+          options: ['var', 'let', 'const', 'constant'],
+          correctAnswer: 2
+        },
+        {
+          type: 'MCQ',
+          question: 'What does API stand for?',
+          options: ['Application Programming Interface', 'Advanced Protocol Integration', 'Application Process Integration', 'Automatic Protocol Interface'],
+          correctAnswer: 0
+        },
+        
+        // ===== OPERATING SYSTEMS QUESTIONS (9-16) =====
+        {
+          type: 'MCQ',
+          question: 'What is the primary function of an operating system?',
+          options: ['Run applications only', 'Manage hardware and software resources', 'Store data', 'Display graphics'],
+          correctAnswer: 1
+        },
+        {
+          type: 'MCQ',
+          question: 'Which of these is NOT a function of the OS?',
+          options: ['Memory management', 'File management', 'Compiling code', 'Process scheduling'],
+          correctAnswer: 2
+        },
+        {
+          type: 'MCQ',
+          question: 'What is a process in an operating system?',
+          options: ['A single thread', 'An instance of a program in execution', 'A file', 'A memory block'],
+          correctAnswer: 1
+        },
+        {
+          type: 'MCQ',
+          question: 'What is thrashing in operating systems?',
+          options: ['System crash', 'Excessive page swapping causing performance degradation', 'Disk failure', 'Memory leak'],
+          correctAnswer: 1
+        },
+        {
+          type: 'MCQ',
+          question: 'Which scheduling algorithm gives priority to the process with smallest burst time?',
+          options: ['FIFO', 'SJF (Shortest Job First)', 'Round Robin', 'Priority Scheduling'],
+          correctAnswer: 1
+        },
+        {
+          type: 'MCQ',
+          question: 'What is a deadlock in OS?',
+          options: ['Process termination', 'Two or more processes waiting indefinitely for resources held by each other', 'Memory overflow', 'Disk corruption'],
+          correctAnswer: 1
+        },
+        {
+          type: 'MCQ',
+          question: 'Which of these is a necessary condition for deadlock?',
+          options: ['Mutual exclusion', 'Hold and wait', 'No preemption', 'All of the above'],
+          correctAnswer: 3
+        },
+        {
+          type: 'MCQ',
+          question: 'What is virtual memory?',
+          options: ['Extra RAM chips', 'Disk space used as an extension to main memory', 'Cache memory', 'GPU memory'],
+          correctAnswer: 1
+        },
+
+        // ===== DATABASE MANAGEMENT SYSTEMS QUESTIONS (17-25) =====
+        {
+          type: 'MCQ',
+          question: 'What does ACID stand for in database transactions?',
+          options: ['Atomicity, Consistency, Isolation, Durability', 'Automatic, Concurrent, Integer, Dimension', 'Atomicity, Concurrency, Integrity, Data', 'All, Check, Insert, Delete'],
+          correctAnswer: 0
+        },
+        {
+          type: 'MCQ',
+          question: 'Which SQL command is used to retrieve data?',
+          options: ['INSERT', 'UPDATE', 'SELECT', 'DELETE'],
+          correctAnswer: 2
+        },
+        {
+          type: 'MCQ',
+          question: 'What is database normalization?',
+          options: ['Backing up data', 'Organizing data to reduce redundancy', 'Encrypting data', 'Compressing data'],
+          correctAnswer: 1
+        },
+        {
+          type: 'MCQ',
+          question: 'What is a PRIMARY KEY?',
+          options: ['A key to access the database', 'A unique identifier for each record in a table', 'A password', 'An encryption key'],
+          correctAnswer: 1
+        },
+        {
+          type: 'MCQ',
+          question: 'Which of these is NOT a type of join in SQL?',
+          options: ['INNER JOIN', 'OUTER JOIN', 'LEFT JOIN', 'CIRCULAR JOIN'],
+          correctAnswer: 3
+        },
+        {
+          type: 'MCQ',
+          question: 'What does an INDEX do in a database?',
+          options: ['Sorts the data alphabetically', 'Speeds up data retrieval', 'Encrypts the data', 'Compresses data'],
+          correctAnswer: 1
+        },
+        {
+          type: 'MCQ',
+          question: 'Which normal form eliminates transitive dependencies?',
+          options: ['1NF', '2NF', '3NF', 'BCNF'],
+          correctAnswer: 2
+        },
+        {
+          type: 'MCQ',
+          question: 'What is a FOREIGN KEY?',
+          options: ['A key used to delete records', 'A key that links to the primary key of another table', 'An encryption key', 'A backup key'],
+          correctAnswer: 1
+        },
+        {
+          type: 'MCQ',
+          question: 'Which SQL clause is used to group rows?',
+          options: ['WHERE', 'GROUP BY', 'ORDER BY', 'HAVING'],
+          correctAnswer: 1
+        }
+      ],
+      duration: 90,
+      startTime: new Date(),
+      endTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+      assignedUsers: [user._id, user2._id, user3._id, user4._id], // Assigned to ALL users
+      isActive: true,
+      isPublished: true
+    });
+    await comprehensiveExam.save();
+    console.log('Created comprehensive exam (Coding + OS + DBMS) for all users:', comprehensiveExam.title);
+
     // Update users with assigned exams
-    user.assignedExams.push(exam._id, exam2._id, exam3._id, dbExam._id, webExam._id, mathExam._id, physicsExam._id, chemistryExam._id);
+    user.assignedExams.push(exam._id, exam2._id, exam3._id, dbExam._id, webExam._id, mathExam._id, physicsExam._id, chemistryExam._id, comprehensiveExam._id);
     await user.save();
 
-    user2.assignedExams.push(codingExam1._id, dsExam._id, webExam._id);
+    user2.assignedExams.push(codingExam1._id, dsExam._id, webExam._id, comprehensiveExam._id);
     await user2.save();
 
-    user3.assignedExams.push(codingExam1._id, codingExam2._id, dbExam._id);
+    user3.assignedExams.push(codingExam1._id, codingExam2._id, dbExam._id, comprehensiveExam._id);
     await user3.save();
 
-    user4.assignedExams.push(codingExam2._id, dsExam._id, webExam._id);
+    user4.assignedExams.push(codingExam2._id, dsExam._id, webExam._id, comprehensiveExam._id);
     await user4.save();
 
     // Create sample completed exam attempt
@@ -565,17 +736,27 @@ const seedData = async () => {
     console.log('Seed data created successfully!');
     console.log('\nTest credentials:');
     console.log('Admin: admin1 / admin123');
-    console.log('\nStudent 1 (John Doe): student1 / password123');
-    console.log('  Restricted Exams (only accessible by student1):');
-    console.log('  - Mathematics Quiz, Science Quiz, History Quiz');
-    console.log('  - Advanced Mathematics, Physics Fundamentals, Chemistry Basics');
-    console.log('  - Database Management Systems, Web Development Fundamentals');
+    console.log('\n' + '='.repeat(70));
+    console.log('📚 COMPREHENSIVE EXAM FOR ALL USERS:');
+    console.log('='.repeat(70));
+    console.log('Title: Comprehensive Tech Assessment: Coding + OS + DBMS');
+    console.log('Duration: 90 minutes');
+    console.log('Questions: 25 (Coding: 8, OS: 8, DBMS: 9)');
+    console.log('Available to: ALL USERS (student1, student2, student3, student4)');
+    console.log('='.repeat(70));
+    console.log('\nStudent Logins:\n');
+    console.log('Student 1 (John Doe): student1 / password123');
+    console.log('  - Comprehensive Exam: Coding + OS + DBMS ✓');
+    console.log('  - Other Exams: Math, Science, History, Physics, Chemistry, DBMS, Web Dev');
     console.log('\nStudent 2 (Jane Smith): student2 / password123');
-    console.log('  Exams: JavaScript Fundamentals, Data Structures & Algorithms, Web Development Fundamentals');
+    console.log('  - Comprehensive Exam: Coding + OS + DBMS ✓');
+    console.log('  - Other Exams: JavaScript Fundamentals, Data Structures & Algorithms, Web Development Fundamentals');
     console.log('\nStudent 3 (Bob Johnson): student3 / password123');
-    console.log('  Exams: JavaScript Fundamentals, Python Programming Basics, Database Management Systems');
+    console.log('  - Comprehensive Exam: Coding + OS + DBMS ✓');
+    console.log('  - Other Exams: JavaScript Fundamentals, Python Programming Basics, Database Management Systems');
     console.log('\nStudent 4 (Alice Brown): student4 / password123');
-    console.log('  Exams: Python Programming Basics, Data Structures & Algorithms, Web Development Fundamentals');
+    console.log('  - Comprehensive Exam: Coding + OS + DBMS ✓');
+    console.log('  - Other Exams: Python Programming Basics, Data Structures & Algorithms, Web Development Fundamentals');
     
     process.exit(0);
   } catch (error) {

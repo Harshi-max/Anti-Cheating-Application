@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../utils/api';
+import CodingSubmissionReview from '../components/CodingSubmissionReview';
 import { motion } from 'framer-motion';
 import { Plus, Users, BookOpen, AlertTriangle, UserCheck, UserX, Eye, CheckCircle, XCircle, Trash2, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -25,12 +26,26 @@ const Admin = () => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    questions: [{ question: '', options: ['', '', '', ''], correctAnswer: 0 }],
+    questions: [{ type: 'MCQ', question: '', options: ['', '', '', ''], correctAnswer: 0 }],
     duration: 30,
     startTime: '',
     endTime: '',
     isPublished: true
   });
+
+  const getDefaultQuestion = (type) => {
+    if (type === 'CODING') {
+      return {
+        type: 'CODING',
+        question: '',
+        languages: ['python'],
+        starterCode: { python: '' },
+        testCases: [],
+        maxScore: 10
+      };
+    }
+    return { type: 'MCQ', question: '', options: ['', '', '', ''], correctAnswer: 0 };
+  };
 
   useEffect(() => {
     fetchAllData();
@@ -72,7 +87,7 @@ const Admin = () => {
       setFormData({
         title: '',
         description: '',
-        questions: [{ question: '', options: ['', '', '', ''], correctAnswer: 0 }],
+        questions: [{ type: 'MCQ', question: '', options: ['', '', '', ''], correctAnswer: 0 }],
         duration: 30,
         startTime: '',
         endTime: '',
@@ -85,16 +100,34 @@ const Admin = () => {
   };
 
   const addQuestion = () => {
+    const newType = 'MCQ'; // Default to MCQ for new questions
     setFormData({
       ...formData,
-      questions: [...formData.questions, { question: '', options: ['', '', '', ''], correctAnswer: 0 }]
+      questions: [...formData.questions, getDefaultQuestion(newType)]
     });
   };
 
   const updateQuestion = (index, field, value) => {
     const newQuestions = [...formData.questions];
-    if (field === 'options') {
+    
+    // Handle type change
+    if (field === 'type' && newQuestions[index].type !== value) {
+      // Replace entire question structure based on new type
+      newQuestions[index] = getDefaultQuestion(value);
+    } else if (field === 'options') {
       newQuestions[index].options = value;
+    } else if (field === 'languages') {
+      newQuestions[index].languages = value;
+      // Ensure starterCode has entries for all selected languages
+      const starterCode = newQuestions[index].starterCode || {};
+      value.forEach(lang => {
+        if (!starterCode[lang]) {
+          starterCode[lang] = '';
+        }
+      });
+      newQuestions[index].starterCode = starterCode;
+    } else if (field === 'testCases') {
+      newQuestions[index].testCases = value;
     } else {
       newQuestions[index][field] = value;
     }
@@ -348,42 +381,220 @@ const Admin = () => {
                   </button>
                 </div>
                 {formData.questions.map((q, index) => (
-                  <div key={index} className="mb-4 p-4 border rounded-lg">
+                  <div key={index} className="mb-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-700">
+                    {/* Question type selector */}
+                    <div className="mb-3">
+                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Question Type
+                      </label>
+                      <select
+                        value={q.type || 'MCQ'}
+                        onChange={(e) => updateQuestion(index, 'type', e.target.value)}
+                        className={`w-full px-2 py-1 border rounded-lg text-sm ${
+                          darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'
+                        }`}
+                      >
+                        <option value="MCQ">Multiple Choice (MCQ)</option>
+                        <option value="CODING">Coding Problem</option>
+                      </select>
+                    </div>
+
+                    {/* Common question text */}
                     <input
                       type="text"
-                      placeholder="Question"
+                      placeholder="Question/Problem Statement"
                       value={q.question}
                       onChange={(e) => updateQuestion(index, 'question', e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-lg mb-2 ${
-                        darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                      className={`w-full px-3 py-2 border rounded-lg mb-3 ${
+                        darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'
                       }`}
                       required
                     />
-                    {q.options.map((option, optIndex) => (
-                      <div key={optIndex} className="flex items-center mb-1">
-                        <input
-                          type="radio"
-                          name={`correct-${index}`}
-                          checked={q.correctAnswer === optIndex}
-                          onChange={() => updateQuestion(index, 'correctAnswer', optIndex)}
-                          className="mr-2"
-                        />
-                        <input
-                          type="text"
-                          placeholder={`Option ${optIndex + 1}`}
-                          value={option}
-                          onChange={(e) => {
-                            const newOptions = [...q.options];
-                            newOptions[optIndex] = e.target.value;
-                            updateQuestion(index, 'options', newOptions);
-                          }}
-                          className={`flex-1 px-3 py-1 border rounded ${
-                            darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                          }`}
-                          required
-                        />
-                      </div>
-                    ))}
+
+                    {/* MCQ-specific fields */}
+                    {q.type === 'MCQ' && (
+                      <>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Options
+                        </label>
+                        {q.options.map((option, optIndex) => (
+                          <div key={optIndex} className="flex items-center mb-2">
+                            <input
+                              type="radio"
+                              name={`correct-${index}`}
+                              checked={q.correctAnswer === optIndex}
+                              onChange={() => updateQuestion(index, 'correctAnswer', optIndex)}
+                              className="mr-2"
+                            />
+                            <input
+                              type="text"
+                              placeholder={`Option ${optIndex + 1}`}
+                              value={option}
+                              onChange={(e) => {
+                                const newOptions = [...q.options];
+                                newOptions[optIndex] = e.target.value;
+                                updateQuestion(index, 'options', newOptions);
+                              }}
+                              className={`flex-1 px-3 py-1 border rounded ${
+                                darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'
+                              }`}
+                              required
+                            />
+                          </div>
+                        ))}
+                      </>
+                    )}
+
+                    {/* CODING-specific fields */}
+                    {q.type === 'CODING' && (
+                      <>
+                        <div className="mb-3">
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Supported Languages
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {['python', 'java', 'cpp', 'javascript'].map((lang) => (
+                              <label key={lang} className="flex items-center">
+                                <input
+                                  type="checkbox"
+                                  checked={(q.languages || []).includes(lang)}
+                                  onChange={(e) => {
+                                    let langs = q.languages || [];
+                                    if (e.target.checked) {
+                                      langs = [...langs, lang];
+                                    } else {
+                                      langs = langs.filter(l => l !== lang);
+                                    }
+                                    updateQuestion(index, 'languages', langs);
+                                  }}
+                                  className="mr-1"
+                                />
+                                <span className="text-sm text-gray-700 dark:text-gray-300">{lang}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="mb-3">
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Max Score
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={q.maxScore || 10}
+                            onChange={(e) => updateQuestion(index, 'maxScore', parseInt(e.target.value))}
+                            className={`w-full px-3 py-1 border rounded-lg text-sm ${
+                              darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'
+                            }`}
+                          />
+                        </div>
+
+                        {/* Starter Code */}
+                        {(q.languages || []).map((lang) => (
+                          <div key={lang} className="mb-3">
+                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Starter Code ({lang})
+                            </label>
+                            <textarea
+                              value={(q.starterCode && q.starterCode[lang]) || ''}
+                              onChange={(e) => {
+                                const starterCode = { ...q.starterCode };
+                                starterCode[lang] = e.target.value;
+                                updateQuestion(index, 'starterCode', starterCode);
+                              }}
+                              className={`w-full px-3 py-2 border rounded-lg font-mono text-xs ${
+                                darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'
+                              }`}
+                              rows={4}
+                              placeholder={`Enter starter code for ${lang}...`}
+                            />
+                          </div>
+                        ))}
+
+                        {/* Test Cases */}
+                        <div className="mb-3">
+                          <div className="flex justify-between items-center mb-2">
+                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                              Test Cases
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const testCases = q.testCases || [];
+                                testCases.push({ input: '', expectedOutput: '', weight: 1, isSample: false });
+                                updateQuestion(index, 'testCases', testCases);
+                              }}
+                              className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                            >
+                              Add Test Case
+                            </button>
+                          </div>
+                          {(q.testCases || []).map((tc, tcIndex) => (
+                            <div key={tcIndex} className="mb-2 p-2 bg-gray-100 dark:bg-gray-600 rounded">
+                              <div className="flex justify-between items-center mb-1">
+                                <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Test Case {tcIndex + 1}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const testCases = (q.testCases || []).filter((_, i) => i !== tcIndex);
+                                    updateQuestion(index, 'testCases', testCases);
+                                  }}
+                                  className="text-xs px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 mb-1">
+                                <div>
+                                  <input
+                                    type="text"
+                                    placeholder="Input"
+                                    value={tc.input}
+                                    onChange={(e) => {
+                                      const testCases = [...(q.testCases || [])];
+                                      testCases[tcIndex].input = e.target.value;
+                                      updateQuestion(index, 'testCases', testCases);
+                                    }}
+                                    className={`w-full px-2 py-1 border rounded text-xs ${
+                                      darkMode ? 'bg-gray-500 border-gray-400 text-white' : 'bg-white border-gray-300'
+                                    }`}
+                                  />
+                                </div>
+                                <div>
+                                  <input
+                                    type="text"
+                                    placeholder="Expected Output"
+                                    value={tc.expectedOutput}
+                                    onChange={(e) => {
+                                      const testCases = [...(q.testCases || [])];
+                                      testCases[tcIndex].expectedOutput = e.target.value;
+                                      updateQuestion(index, 'testCases', testCases);
+                                    }}
+                                    className={`w-full px-2 py-1 border rounded text-xs ${
+                                      darkMode ? 'bg-gray-500 border-gray-400 text-white' : 'bg-white border-gray-300'
+                                    }`}
+                                  />
+                                </div>
+                              </div>
+                              <label className="flex items-center text-xs">
+                                <input
+                                  type="checkbox"
+                                  checked={tc.isSample || false}
+                                  onChange={(e) => {
+                                    const testCases = [...(q.testCases || [])];
+                                    testCases[tcIndex].isSample = e.target.checked;
+                                    updateQuestion(index, 'testCases', testCases);
+                                  }}
+                                  className="mr-1"
+                                />
+                                <span className="text-gray-700 dark:text-gray-300">Sample Test Case (visible to student)</span>
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
@@ -684,6 +895,11 @@ const Admin = () => {
                     <p className="text-gray-500 dark:text-gray-400">No students have attempted this exam yet</p>
                   )}
                 </div>
+              </div>
+
+              {/* Coding Submissions Review */}
+              <div className="mt-6 pt-6 border-t">
+                <CodingSubmissionReview examId={selectedExam?._id} darkMode={darkMode} />
               </div>
             </div>
           </div>
