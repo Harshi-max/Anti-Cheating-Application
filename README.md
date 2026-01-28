@@ -14,6 +14,7 @@ This platform enables organizations and institutions to conduct **secure online 
 - AI-based proctoring & violation tracking
 - Backend-authoritative security model
 - Enterprise-grade architecture & scalability
+- Dark and Light Mode capability
 
 ---
 
